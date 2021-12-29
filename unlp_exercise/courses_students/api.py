@@ -1,8 +1,10 @@
+from django.db.models.fields import GenericIPAddressField
+from django.http.response import HttpResponse, JsonResponse
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.utils import serializer_helpers
-from courses_students.models import Course, Student, Course_student
-from courses_students.serializers import StudentSerializer, CourseSerializer, Course_studentSerializer
+from courses_students.models import Course, Student, Enrol
+from courses_students.serializers import StudentSerializer, CourseSerializer, EnrolSerializer, AverageSerializer
 
 @api_view(['GET', 'POST'])
 def student_api_view(request):
@@ -38,6 +40,23 @@ def student_detail_view(request, pk):
         student.delete()
         return Response("Estudiante eliminado")
 
+@api_view(['GET'])
+def average_grade_view(request, pk):
+    if request.method == 'GET':
+        student = Student.objects.get(id = pk)
+        enrol_list = Enrol.objects.filter(student = student.id)
+        grades = 0
+        average = None
+        for i in range(len(enrol_list)):
+            grades += enrol_list[i].grade
+        if len(enrol_list) != 0:
+            average = {'average': grades/len(enrol_list)}
+            average_serializer = AverageSerializer(data = average)
+            if average_serializer.is_valid():
+                return Response(average_serializer.data)
+            #return Response(f"El alumno {student.name} {student.last_name} tiene un prmedio de {average_serializer}")
+        return JsonResponse({'Message': 'No hay suficientes cursos'}, status=404)
+
 @api_view(['GET', 'POST'])
 def courses_api_view(request):
     if request.method == 'GET':
@@ -62,7 +81,6 @@ def course_detail_view(request, pk):
     elif request.method == 'PUT':
         course = Course.objects.get(id = pk)
         course_serializer = CourseSerializer(course, data = request.data)
-        student = Student.objects.get(id = pk)
         if course_serializer.is_valid():
             course_serializer.save()
             return Response(course_serializer.data)
@@ -72,3 +90,32 @@ def course_detail_view(request, pk):
         course = Course.objects.get(id = pk)
         course.delete()
         return Response("Curso eliminado")
+
+@api_view(['GET' ,'POST', 'PUT'])
+def enroll_student_view(request):
+    if request.method == 'POST':
+        enroll_serializer = EnrolSerializer(data=request.data)
+        if enroll_serializer.is_valid():
+            enroll_serializer.save()
+            return Response(enroll_serializer.data)
+        return Response(enroll_serializer.errors)
+
+    elif request.method == 'PUT':
+        student_id = request.data.get('student')
+        course_id = request.data.get('course')
+        if course_id and student_id:
+            course = Course.objects.get(id = course_id)
+            student = Student.objects.get(id = student_id)
+            enroll = Enrol.objects.get(student = student, course = course)
+            enroll_serializer = EnrolSerializer(enroll, data=request.data)
+            if enroll_serializer.is_valid():
+                enroll_serializer.save()
+                return Response(enroll_serializer.data)
+            return Response(enroll_serializer.errors)
+        return JsonResponse({'Message': 'El curso y el estudiante son requeridos'}, status=400)
+
+    elif request.method == 'GET':
+        enroll = Enrol.objects.all()
+        enroll_serializer = EnrolSerializer(enroll, many=True)
+        return Response(enroll_serializer.data)
+       

@@ -1,6 +1,6 @@
 from django.db.models import fields
 from rest_framework import serializers
-from courses_students.models import Course, Student, Course_student
+from courses_students.models import Course, Student, Enrol
 
 class StudentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,7 +12,10 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = '__all__'
 
-class Course_studentSerializer(serializers.ModelSerializer):
+class EnrolSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Course_student
+        model = Enrol
         fields = '__all__'
+
+class AverageSerializer(serializers.Serializer):
+    average = serializers.FloatField()
