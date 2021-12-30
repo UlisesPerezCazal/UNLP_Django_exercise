@@ -1,10 +1,12 @@
 from django.db.models.fields import GenericIPAddressField
+from django.http import response
 from django.http.response import HttpResponse, JsonResponse
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.utils import serializer_helpers
 from courses_students.models import Course, Student, Enrol
 from courses_students.serializers import StudentSerializer, CourseSerializer, EnrolSerializer, AverageSerializer
+import csv
 
 @api_view(['GET', 'POST'])
 def student_api_view(request):
@@ -92,13 +94,13 @@ def course_detail_view(request, pk):
         return Response("Curso eliminado")
 
 @api_view(['GET' ,'POST', 'PUT'])
-def enroll_student_view(request):
+def enrol_student_view(request):
     if request.method == 'POST':
-        enroll_serializer = EnrolSerializer(data=request.data)
-        if enroll_serializer.is_valid():
-            enroll_serializer.save()
-            return Response(enroll_serializer.data)
-        return Response(enroll_serializer.errors)
+        enrol_serializer = EnrolSerializer(data=request.data)
+        if enrol_serializer.is_valid():
+            enrol_serializer.save()
+            return Response(enrol_serializer.data)
+        return Response(enrol_serializer.errors)
 
     elif request.method == 'PUT':
         student_id = request.data.get('student')
@@ -106,16 +108,27 @@ def enroll_student_view(request):
         if course_id and student_id:
             course = Course.objects.get(id = course_id)
             student = Student.objects.get(id = student_id)
-            enroll = Enrol.objects.get(student = student, course = course)
-            enroll_serializer = EnrolSerializer(enroll, data=request.data)
-            if enroll_serializer.is_valid():
-                enroll_serializer.save()
-                return Response(enroll_serializer.data)
-            return Response(enroll_serializer.errors)
+            enrol = Enrol.objects.get(student = student, course = course)
+            enrol_serializer = EnrolSerializer(enrol, data=request.data)
+            if enrol_serializer.is_valid():
+                enrol_serializer.save()
+                return Response(enrol_serializer.data)
+            return Response(enrol_serializer.errors)
         return JsonResponse({'Message': 'El curso y el estudiante son requeridos'}, status=400)
 
     elif request.method == 'GET':
         enroll = Enrol.objects.all()
         enroll_serializer = EnrolSerializer(enroll, many=True)
         return Response(enroll_serializer.data)
-       
+    
+@api_view(['GET'])
+def course_students_view(request, pk):
+    if request.method == 'GET':
+        response = HttpResponse(content_type='text/csv')
+        response['content-Disposition'] = 'atachment; filename="student.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Curso', 'Estudiante', 'Finalizado', 'Nota'])
+        students = Enrol.objects.filter(course=pk)
+        for student in students:
+            writer.writerow([student.course.name, student.student.name, student.finalized, student.grade])
+        return response
