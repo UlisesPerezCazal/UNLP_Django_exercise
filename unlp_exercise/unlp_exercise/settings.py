@@ -16,7 +16,6 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
@@ -78,9 +77,10 @@ WSGI_APPLICATION = 'unlp_exercise.wsgi.application'
 
 DATABASES = {
     'default': {
-		'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': config('NAME'),
-        'USER': config('USER'),
+        # Cambie el nombre de la variable a 'DB_USER' porque en mi maquina me reemplazaba el valor con el nombre de usuario del OS.
+        'USER': config('DB_USER'),
         'PASSWORD': config('PASSWORD'),
         'HOST': config('HOST'),
         'PORT': config('PORT', cast=int),
