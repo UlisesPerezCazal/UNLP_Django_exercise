@@ -21,6 +21,7 @@ Se necesita levantar una base de datos, en mi caso usé postgreSQL(https://www.p
 asignarle los valores correspondientes a su configuracion de base de datos
 
 Hacer las migraciones de los modelos:
+    # Las migraciones se versionan y por lo tanto los otros devs SOLO deberian conrrer el migrate.
     $ python manage.py makemigrations
     $ python manage.py migrate
 Esto creara la base de datos vacía con los modelos del proyecto, lista para ser populada.

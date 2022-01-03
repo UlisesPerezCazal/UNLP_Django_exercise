@@ -8,8 +8,18 @@ from courses_students.models import Course, Student, Enrol
 from courses_students.serializers import StudentSerializer, CourseSerializer, EnrolSerializer, AverageSerializer
 import csv
 
+"""
+Para implementar una API basada en una entidad de nuestro modelo se suele usar
+los ModelsViewSets (https://www.django-rest-framework.org/api-guide/viewsets/#modelviewset)
+que te ayuda a ahorrar (agrega validaciones por encima, etc.) y dejar mas prolijo el codigo.
+
+Django promueve la implementacion de las vistas en el archivos views.py. O tambien podriamos tener
+archivos separados por entidad dentro de la app en de un directorio llamado views.
+"""
+
 @api_view(['GET', 'POST'])
 def student_api_view(request):
+    # Podriamos separar cada "action" HTTP en un metodo y evitar los IFs.
     if request.method == 'GET':
         students = Student.objects.all()
         students_serializer = StudentSerializer(students, many=True)
@@ -25,6 +35,10 @@ def student_api_view(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 def student_detail_view(request, pk):
     if request.method == 'GET':
+        """
+        Se podria usar el metodo "get_object_or_404" de rest_framework.generics
+        que retorna el objeto si existe o de lo contrario retorna un 404 
+        """
         student = Student.objects.get(id = pk)
         student_serializer = StudentSerializer(student)
         return Response(student_serializer.data)
@@ -40,18 +54,28 @@ def student_detail_view(request, pk):
     elif request.method == 'DELETE':
         student = Student.objects.get(id = pk)
         student.delete()
+        # Por RESTful podriamos haber retornado un formato JSON o el mismo objeto que acabamos de eliminar.
         return Response("Estudiante eliminado")
 
 @api_view(['GET'])
 def average_grade_view(request, pk):
+    # Aca se podria evitar el IF ya que solo se soporta GET.
     if request.method == 'GET':
         student = Student.objects.get(id = pk)
         enrol_list = Enrol.objects.filter(student = student.id)
         grades = 0
         average = None
+        """
+        Se podria evitar la iteracion haciendo uso de la funcion de agregacion AVG de SQL.
+        https://www.w3schools.com/sql/sql_count_avg_sum.asp
+        https://docs.djangoproject.com/en/4.0/topics/db/aggregation/#aggregation
+        """
         for i in range(len(enrol_list)):
             grades += enrol_list[i].grade
         if len(enrol_list) != 0:
+            """
+            Quizas en este caso no tenia mucho sentido usar el serializer.
+            """
             average = {'average': grades/len(enrol_list)}
             average_serializer = AverageSerializer(data = average)
             if average_serializer.is_valid():
@@ -101,8 +125,12 @@ def enrol_student_view(request):
             enrol_serializer.save()
             return Response(enrol_serializer.data)
         return Response(enrol_serializer.errors)
-
     elif request.method == 'PUT':
+        """
+        La operacion para modificar a nivel RESTful suele especificar en el ID de la entidad objetivo
+        dentro de la URL del endpoint. Por ejemplo .../enrollments/ID/.
+        Mediante este ID se deberia obtener el objeto y modificarlo.
+        """    
         student_id = request.data.get('student')
         course_id = request.data.get('course')
         if course_id and student_id:
@@ -129,6 +157,10 @@ def course_students_view(request, pk):
         writer = csv.writer(response)
         writer.writerow(['Curso', 'Estudiante', 'Finalizado', 'Nota'])
         students = Enrol.objects.filter(course=pk)
+        """
+        Cuando se accede a objetos recuperados de la base de datos dentro de una iteracion,
+        debemos considerar optimizaciones como https://docs.djangoproject.com/en/4.0/ref/models/querysets/#select-related y https://docs.djangoproject.com/en/4.0/ref/models/querysets/#prefetch-related 
+        """
         for student in students:
             writer.writerow([student.course.name, student.student.name, student.finalized, student.grade])
         return response
